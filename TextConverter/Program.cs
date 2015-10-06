@@ -73,7 +73,6 @@ namespace TextConverter
             {
                 XMLEmitter(MemoryFile, OutFile, fulps, bulps);
             }
-            Console.ReadLine();
         }
 
 
