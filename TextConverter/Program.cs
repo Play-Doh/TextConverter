@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using System.Configuration;
+using System.Xml;
 
 // usage : command infile outfile
 
@@ -66,6 +67,13 @@ namespace TextConverter
 
             // underlay must be none if not in use
             PostScriptEmitter(PSHeader, MemoryFile, OutFile, xstart, ystart, linespacing, fulps, bulps);
+
+            //optional output XML
+            if(ConfigurationManager.AppSettings["outputXML"] == "YES")
+            {
+                XMLEmitter(MemoryFile, OutFile, fulps, bulps);
+            }
+            Console.ReadLine();
         }
 
 
@@ -384,6 +392,71 @@ namespace TextConverter
 
                     File.WriteAllText(bulps, BackULheader + bulbuffer + BackULtail);
                 }
+            }
+        }
+
+        public static void XMLEmitter(PrintFile memoryfile, string psoutputfile, string frontul = "none", string backul = "none")
+        {
+            try
+            {
+                string xmloutputfile = Path.ChangeExtension(psoutputfile, "xml"); ;
+
+                if (!File.Exists(xmloutputfile))
+                {
+                    XmlWriterSettings xmloutsettings = new XmlWriterSettings();
+                    xmloutsettings.Indent = true;
+                    xmloutsettings.IndentChars = ("\t");
+                    xmloutsettings.NewLineOnAttributes = true;
+                    xmloutsettings.WriteEndDocumentOnClose = true;
+
+                    using ( XmlWriter xmlout = XmlWriter.Create(xmloutputfile, xmloutsettings))
+                    {
+                        xmlout.WriteStartDocument();
+                        xmlout.WriteStartElement("JobData");
+
+                        if (frontul != "none")
+                        {
+                            // add underlay
+                            // stored in xml as <![CDATA[datagoeshere]]>
+                            if (File.Exists(frontul))
+                            {
+                                string fulbuffer = File.ReadAllText(frontul);
+                                xmlout.WriteStartElement("frontul");
+                                xmlout.WriteCData(fulbuffer);
+                                xmlout.WriteEndElement();
+                            }
+                        }
+                        if (backul != "none")
+                        {
+                            // add underlay
+                            if (File.Exists(backul))
+                            {
+                                string bulbuffer = File.ReadAllText(backul);
+                                xmlout.WriteStartElement("backul");
+                                xmlout.WriteCData(bulbuffer);
+                                xmlout.WriteEndElement();
+                            }
+                        }
+                        
+                        foreach (Page page in memoryfile.Pages)
+                        {
+                            xmlout.WriteStartElement("page");
+                            foreach (StringBuilder line in page.Lines)
+                            {
+                                xmlout.WriteElementString("line", line.ToString());
+                            }
+                            xmlout.WriteEndElement();
+                        }
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("File Exists !");
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("There was an error : {0}", e);
             }
         }
     }
